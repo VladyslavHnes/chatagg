@@ -339,41 +339,166 @@ function saveNewBook() {
         });
 }
 
-function syncNow() {
+async function syncNow() {
     var syncBtn = document.getElementById('sync-btn');
-    var syncStatus = document.getElementById('sync-status');
+    var syncLog = document.getElementById('sync-log');
+    var syncLogBody = document.getElementById('sync-log-body');
 
     syncBtn.disabled = true;
-    syncStatus.className = 'sync-status running';
-    syncStatus.textContent = 'Syncing...';
+    syncLogBody.innerHTML = '';
+    syncLog.style.display = 'block';
 
-    API.post('/api/sync')
-        .then(function (result) {
-            if (result.auth_required) {
-                syncStatus.className = 'sync-status running';
-                var label = result.auth_type === 'password' ? 'password' : 'verification code';
-                syncStatus.textContent = 'Telegram authentication required. Enter your ' + label + '.';
-                showAuthModal(result.auth_type);
-                return;
+    var reader = null;
+    var aborted = false;
+
+    function abort() {
+        aborted = true;
+        if (reader) { try { reader.cancel(); } catch (e) {} }
+    }
+
+    // Open SSE stream first
+    var response;
+    try {
+        response = await fetch('/api/sync/events', {
+            headers: { 'Authorization': 'Basic ' + API.credentials }
+        });
+    } catch (err) {
+        appendLogLine(syncLogBody, 'error', 'Failed to connect: ' + err.message);
+        syncBtn.disabled = false;
+        return;
+    }
+
+    if (!response.ok) {
+        appendLogLine(syncLogBody, 'error', 'HTTP ' + response.status);
+        syncBtn.disabled = false;
+        return;
+    }
+
+    reader = response.body.getReader();
+    var decoder = new TextDecoder();
+    var buffer = '';
+
+    // Consume SSE stream in the background
+    (async function consumeStream() {
+        while (!aborted) {
+            var chunk;
+            try { chunk = await reader.read(); } catch (e) { break; }
+            if (chunk.done) break;
+            buffer += decoder.decode(chunk.value, { stream: true });
+            var parts = buffer.split('\n\n');
+            buffer = parts.pop();
+            for (var i = 0; i < parts.length; i++) {
+                handleSseFrame(parts[i], syncLogBody, syncBtn, abort);
             }
-            clearBooksCache();
-            syncStatus.className = 'sync-status done';
-            syncStatus.textContent = 'Sync complete: ' +
-                result.new_messages + ' new messages, ' +
-                result.books_found + ' books, ' +
-                result.quotes_found + ' quotes, ' +
-                result.photos_processed + ' photos, ' +
-                result.flagged_items + ' flagged (' +
-                result.duration_seconds.toFixed(1) + 's)';
+        }
+        // Stream ended without a done/error event — re-enable button
+        if (!aborted && syncBtn.disabled) {
+            appendLogLine(syncLogBody, 'error', 'Stream closed unexpectedly');
             syncBtn.disabled = false;
+        }
+    })();
+
+    // Trigger sync (returns 202 immediately)
+    try {
+        var r = await fetch('/api/sync', {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Basic ' + API.credentials,
+                'Content-Type': 'application/json'
+            }
+        });
+        if (r.status === 409) {
+            appendLogLine(syncLogBody, 'error', 'Sync already in progress');
+            syncBtn.disabled = false;
+            abort();
+        } else if (!r.ok) {
+            var txt = await r.text();
+            appendLogLine(syncLogBody, 'error', 'HTTP ' + r.status + ': ' + txt);
+            syncBtn.disabled = false;
+            abort();
+        }
+        // 202 = started; SSE events will follow
+    } catch (err) {
+        appendLogLine(syncLogBody, 'error', 'Failed to start sync: ' + err.message);
+        syncBtn.disabled = false;
+        abort();
+    }
+}
+
+function handleSseFrame(frame, container, syncBtn, abort) {
+    var lines = frame.split('\n');
+    var eventType = '';
+    var data = '';
+    for (var i = 0; i < lines.length; i++) {
+        var line = lines[i];
+        if (line.indexOf('event:') === 0) {
+            eventType = line.slice(6).trim();
+        } else if (line.indexOf('data:') === 0) {
+            data = line.slice(5).trim();
+        }
+    }
+    if (!eventType || !data) return;
+    var json;
+    try { json = JSON.parse(data); } catch (e) { return; }
+
+    switch (eventType) {
+        case 'connecting':
+            appendLogLine(container, 'info', 'Connecting to Telegram...');
+            break;
+        case 'fetched':
+            appendLogLine(container, 'info', 'Fetched ' + json.count + ' messages');
+            break;
+        case 'book_found':
+            appendLogLine(container, 'success', 'Found book: ' + json.title + ' \u2014 ' + json.author);
+            break;
+        case 'quote_found':
+            appendLogLine(container, 'muted', '\u201c' + json.snippet + '\u201d');
+            break;
+        case 'photo_processed':
+            appendLogLine(container, 'info', 'Photo processed');
+            break;
+        case 'flagged':
+            appendLogLine(container, 'warning', '\u26a0 Flagged: ' + json.reason);
+            break;
+        case 'enriching_authors':
+            appendLogLine(container, 'info', 'Enriching ' + json.count + ' authors...');
+            break;
+        case 'enriching_books':
+            appendLogLine(container, 'info', 'Enriching ' + json.count + ' books...');
+            break;
+        case 'done':
+            appendLogLine(container, 'done',
+                'Done \u2014 ' + json.new_messages + ' messages, ' +
+                json.books_found + ' books, ' +
+                json.quotes_found + ' quotes, ' +
+                json.photos_processed + ' photos, ' +
+                json.flagged_items + ' flagged (' +
+                parseFloat(json.duration_seconds).toFixed(1) + 's)');
+            syncBtn.disabled = false;
+            clearBooksCache();
             currentPage = 1;
             loadBooks();
-        })
-        .catch(function (err) {
-            syncStatus.className = 'sync-status error';
-            syncStatus.textContent = 'Sync failed: ' + err.message;
+            abort();
+            break;
+        case 'error':
+            appendLogLine(container, 'error', 'Error: ' + json.message);
             syncBtn.disabled = false;
-        });
+            abort();
+            break;
+        case 'auth_required':
+            appendLogLine(container, 'warning', 'Authentication required (' + json.auth_type + ')');
+            showAuthModal(json.auth_type);
+            abort();
+            break;
+    }
+}
+
+function appendLogLine(container, type, text) {
+    var div = document.createElement('div');
+    div.className = 'sync-log-line sync-log-' + type;
+    div.textContent = text;
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
 }
 
 function showAuthModal(authType) {
@@ -444,8 +569,10 @@ function submitAuthCode() {
 }
 
 function pollAuthStatus() {
-    var syncStatus = document.getElementById('sync-status');
-    syncStatus.textContent = 'Authenticating with Telegram...';
+    var syncLog = document.getElementById('sync-log');
+    var syncLogBody = document.getElementById('sync-log-body');
+    appendLogLine(syncLogBody, 'info', 'Authenticating with Telegram...');
+    syncLog.style.display = 'block';
 
     var attempts = 0;
     var maxAttempts = 30;
@@ -457,34 +584,8 @@ function pollAuthStatus() {
                 if (result.state === 'ready') {
                     hideAuthModal();
                     document.getElementById('auth-submit-btn').disabled = false;
-                    syncStatus.textContent = 'Authenticated! Retrying sync...';
-                    // Retry sync now that auth is complete
-                    API.post('/api/sync')
-                        .then(function (syncResult) {
-                            if (syncResult.auth_required) {
-                                syncStatus.className = 'sync-status error';
-                                syncStatus.textContent = 'Authentication still required. Please try again.';
-                                document.getElementById('sync-btn').disabled = false;
-                                return;
-                            }
-                            clearBooksCache();
-                            syncStatus.className = 'sync-status done';
-                            syncStatus.textContent = 'Sync complete: ' +
-                                syncResult.new_messages + ' new messages, ' +
-                                syncResult.books_found + ' books, ' +
-                                syncResult.quotes_found + ' quotes, ' +
-                                syncResult.photos_processed + ' photos, ' +
-                                syncResult.flagged_items + ' flagged (' +
-                                syncResult.duration_seconds.toFixed(1) + 's)';
-                            document.getElementById('sync-btn').disabled = false;
-                            currentPage = 1;
-                            loadBooks();
-                        })
-                        .catch(function (err) {
-                            syncStatus.className = 'sync-status error';
-                            syncStatus.textContent = 'Sync failed: ' + err.message;
-                            document.getElementById('sync-btn').disabled = false;
-                        });
+                    appendLogLine(syncLogBody, 'info', 'Authenticated! Retrying sync...');
+                    syncNow();
                 } else if (result.state === 'waiting_password' && lastSubmittedAuthState !== 'waiting_password') {
                     // After submitting the code, Telegram wants 2FA password
                     document.getElementById('auth-submit-btn').disabled = false;
@@ -498,14 +599,12 @@ function pollAuthStatus() {
                 } else if (result.state === 'error') {
                     hideAuthModal();
                     document.getElementById('auth-submit-btn').disabled = false;
-                    syncStatus.className = 'sync-status error';
-                    syncStatus.textContent = 'Telegram authentication failed.';
+                    appendLogLine(syncLogBody, 'error', 'Telegram authentication failed.');
                     document.getElementById('sync-btn').disabled = false;
                 } else if (attempts >= maxAttempts) {
                     hideAuthModal();
                     document.getElementById('auth-submit-btn').disabled = false;
-                    syncStatus.className = 'sync-status error';
-                    syncStatus.textContent = 'Authentication timed out. Please try again.';
+                    appendLogLine(syncLogBody, 'error', 'Authentication timed out. Please try again.');
                     document.getElementById('sync-btn').disabled = false;
                 } else {
                     setTimeout(poll, 1000);
@@ -533,9 +632,10 @@ document.addEventListener('DOMContentLoaded', function () {
         authCancelBtn.addEventListener('click', function () {
             hideAuthModal();
             document.getElementById('sync-btn').disabled = false;
-            var syncStatus = document.getElementById('sync-status');
-            syncStatus.className = 'sync-status';
-            syncStatus.textContent = '';
+            var syncLog = document.getElementById('sync-log');
+            var syncLogBody = document.getElementById('sync-log-body');
+            syncLog.style.display = 'none';
+            syncLogBody.innerHTML = '';
         });
     }
     if (authInput) {

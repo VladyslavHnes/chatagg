@@ -1032,3 +1032,29 @@ a.stat-card {
     color: var(--status-error);
     border-left-color: var(--status-error);
 }
+
+/* ── Sync Log (SSE live feed) ── */
+.sync-log {
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--bg-surface);
+    margin-bottom: 16px;
+    overflow: hidden;
+}
+.sync-log-body {
+    padding: 10px 14px;
+    max-height: 260px;
+    overflow-y: auto;
+    font-size: 0.8125rem;
+    font-family: 'Inter', monospace;
+    line-height: 1.7;
+}
+.sync-log-line { padding: 1px 0; white-space: pre-wrap; word-break: break-word; }
+.sync-log-info    { color: var(--status-info); }
+.sync-log-success { color: var(--status-success); font-weight: 500; }
+.sync-log-warning { color: var(--status-warning); }
+.sync-log-error   { color: var(--status-error); }
+.sync-log-muted   { color: var(--text-secondary); padding-left: 14px; }
+.sync-log-done    { color: var(--status-success); font-weight: 600;
+                    border-top: 1px solid var(--border-color);
+                    margin-top: 6px; padding-top: 6px; }

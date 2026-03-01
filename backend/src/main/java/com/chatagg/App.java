@@ -7,6 +7,7 @@ import com.chatagg.db.DatabaseManager;
 import com.chatagg.db.UserDao;
 import com.chatagg.model.AppUser;
 import com.chatagg.ocr.OcrService;
+import com.chatagg.sync.SyncEventBus;
 import com.chatagg.sync.SyncService;
 import com.chatagg.telegram.MessageParser;
 import com.chatagg.telegram.TelegramClient;
@@ -33,6 +34,8 @@ public class App {
         MessageParser messageParser = new MessageParser();
         OcrService ocrService = new OcrService(config);
         SyncService syncService = new SyncService(config, db, telegramClient, messageParser, ocrService);
+        SyncEventBus syncEventBus = new SyncEventBus();
+        syncService.setEventBus(syncEventBus);
 
         // Shared response cache (5-minute TTL, explicitly invalidated on mutations)
         ResponseCache responseCache = new ResponseCache(5 * 60 * 1000L);
@@ -91,6 +94,8 @@ public class App {
             }
         });
 
+        app.get("/", ctx -> ctx.redirect("/index.html"));
+
         // User management
         app.get("/api/me", userController::getCurrentUser);
         app.get("/api/users", userController::listUsers);
@@ -113,6 +118,30 @@ public class App {
         app.put("/api/books/{id}/impression", bookController::updateBookImpression);
         app.post("/api/sync", syncController::triggerSync);
         app.post("/api/enrich", syncController::triggerEnrich);
+        app.get("/api/sync/events", ctx -> {
+            ctx.res().setContentType("text/event-stream");
+            ctx.res().setCharacterEncoding("UTF-8");
+            ctx.res().setHeader("Cache-Control", "no-cache");
+            ctx.res().setHeader("X-Accel-Buffering", "no");
+            ctx.res().setHeader("Connection", "keep-alive");
+            ctx.res().flushBuffer();
+
+            java.io.PrintWriter writer = ctx.res().getWriter();
+            syncEventBus.setWriter(writer);
+            try {
+                long deadline = System.currentTimeMillis() + 15 * 60 * 1000L;
+                while (System.currentTimeMillis() < deadline) {
+                    Thread.sleep(500);
+                    writer.write(": ping\n\n");
+                    writer.flush();
+                    if (writer.checkError()) break;
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            } finally {
+                syncEventBus.clearWriter();
+            }
+        });
 
         // US2: Quotes & Search & Review
         app.get("/api/books/{id}/quotes", quoteController::listByBook);

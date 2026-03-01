@@ -38,6 +38,22 @@ public class SyncService {
     private final WikidataClient wikidataClient;
 
     private volatile boolean syncing;
+    private SyncEventBus eventBus;
+
+    public void setEventBus(SyncEventBus eventBus) {
+        this.eventBus = eventBus;
+    }
+
+    private void emit(SyncEvent event) {
+        if (eventBus != null) {
+            eventBus.emit(event);
+        }
+    }
+
+    private static String truncate(String text, int maxLen) {
+        if (text == null) return "";
+        return text.length() <= maxLen ? text : text.substring(0, maxLen) + "…";
+    }
 
     public record SyncResult(
             int newMessages,
@@ -81,18 +97,32 @@ public class SyncService {
 
         try {
             // Ensure Telegram client is authenticated
+            emit(new SyncEvent.Connecting());
             try {
                 telegramClient.start();
             } catch (TelegramClient.AuthRequiredException e) {
+                String authType = switch (e.getAuthState()) {
+                    case WAITING_CODE -> "code";
+                    case WAITING_PASSWORD -> "password";
+                    default -> "unknown";
+                };
+                emit(new SyncEvent.AuthRequired(authType));
                 throw new RuntimeException("Telegram authentication required", e);
             } catch (Exception e) {
                 log.error("Failed to start Telegram client", e);
+                emit(new SyncEvent.Error("Failed to connect to Telegram: " + e.getMessage()));
                 throw new RuntimeException("Failed to connect to Telegram", e);
             }
 
             // Guard: don't proceed unless fully authenticated
             TelegramClient.AuthState currentAuth = telegramClient.getAuthState();
             if (currentAuth != TelegramClient.AuthState.READY) {
+                String authType = switch (currentAuth) {
+                    case WAITING_CODE -> "code";
+                    case WAITING_PASSWORD -> "password";
+                    default -> "unknown";
+                };
+                emit(new SyncEvent.AuthRequired(authType));
                 throw new RuntimeException("Telegram authentication required",
                         new TelegramClient.AuthRequiredException(currentAuth));
             }
@@ -117,6 +147,7 @@ public class SyncService {
 
             // TDLib returns newest first, process in chronological order
             Collections.reverse(messages);
+            emit(new SyncEvent.Fetched(messages.size()));
             log.info("Fetched {} messages from Telegram to process", messages.size());
             if (messages.isEmpty()) {
                 log.warn("No messages returned from Telegram. This may indicate the chat isn't fully loaded in TDLib.");
@@ -184,6 +215,7 @@ public class SyncService {
                                 log.warn("Potential duplicate for '{}' by '{}', flagging", bookEntry.title(), bookEntry.author());
                                 telegramMessageDao.updateProcessingStatus(storedId, "flagged");
                                 flaggedItems++;
+                                emit(new SyncEvent.Flagged("possible duplicate: " + bookEntry.title()));
                             } else {
                                 long bookId = bookDao.insert(book);
                                 newBookIds.add(bookId);
@@ -202,6 +234,7 @@ public class SyncService {
 
                                 telegramMessageDao.updateProcessingStatus(storedId, "processed");
                                 booksFound++;
+                                emit(new SyncEvent.BookFound(bookEntry.title(), bookEntry.author()));
                                 log.info("Book created: '{}' by '{}' (bookId={})", bookEntry.title(), bookEntry.author(), bookId);
                             }
                         } else {
@@ -217,6 +250,7 @@ public class SyncService {
                                 long quoteId = quoteDao.insert(quote);
                                 pendingQuotes.add(new PendingQuote(quoteId, Instant.ofEpochSecond(tdMsg.date)));
                                 quotesFound++;
+                                emit(new SyncEvent.QuoteFound(truncate(rawText, 80)));
                             }
                             telegramMessageDao.updateProcessingStatus(storedId, "processed");
                         }
@@ -267,6 +301,7 @@ public class SyncService {
                                 quotesFound++;
 
                                 photosProcessed++;
+                                emit(new SyncEvent.PhotoProcessed());
                             } catch (Exception e) {
                                 log.error("Failed to process photo for message {}", tdMsg.id, e);
                             }
@@ -306,7 +341,23 @@ public class SyncService {
                     messages.size(), newMessages, skippedDuplicates, booksFound, quotesFound, photosProcessed, flaggedItems,
                     String.format("%.2f", durationSeconds));
 
+            emit(new SyncEvent.Done(newMessages, booksFound, quotesFound, photosProcessed, flaggedItems, durationSeconds));
             return new SyncResult(newMessages, booksFound, quotesFound, photosProcessed, flaggedItems, durationSeconds);
+        } catch (Exception e) {
+            // AuthRequired is already emitted at source; only emit Error for other failures
+            boolean isAuth = false;
+            Throwable c = e;
+            while (c != null) {
+                if (c instanceof TelegramClient.AuthRequiredException) {
+                    isAuth = true;
+                    break;
+                }
+                c = c.getCause();
+            }
+            if (!isAuth) {
+                emit(new SyncEvent.Error(e.getMessage() != null ? e.getMessage() : "Unknown error"));
+            }
+            throw (e instanceof RuntimeException re) ? re : new RuntimeException(e);
         } finally {
             syncing = false;
         }
@@ -321,6 +372,7 @@ public class SyncService {
     public void enrichBooks(List<Long> bookIds, List<Long> authorIds) {
         // Enrich author countries via Wikidata
         List<Author> authors = (authorIds != null) ? authorDao.findWithoutCountryByIds(authorIds) : authorDao.findWithoutCountry();
+        emit(new SyncEvent.EnrichingAuthors(authors.size()));
         log.info("Enriching {} new authors without country data", authors.size());
         int enrichedAuthors = 0;
 
@@ -341,6 +393,7 @@ public class SyncService {
 
         // Enrich book genres via OpenLibrary subjects
         List<Map<String, Object>> booksWithoutGenre = (bookIds != null) ? bookDao.findWithoutGenreByIds(bookIds) : bookDao.findWithoutGenre();
+        emit(new SyncEvent.EnrichingBooks(booksWithoutGenre.size()));
         log.info("Enriching {} new books without genre data", booksWithoutGenre.size());
         int enrichedGenres = 0;
 

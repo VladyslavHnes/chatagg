@@ -35,7 +35,7 @@ function loadDashboard() {
 function renderSummaryCards(data) {
     var container = document.getElementById('summary-cards');
     var cards = [
-        { value: data.total_books, label: 'Books', href: 'books.html' },
+        { value: data.total_books, label: 'Books', href: 'index.html' },
         { value: data.total_quotes, label: 'Quotes', href: 'quotes.html' },
         { value: data.total_authors != null ? data.total_authors : '0', label: 'Authors', href: 'authors.html' },
         { value: data.avg_books_per_month != null ? data.avg_books_per_month : '0', label: 'Avg/Month', href: null }
