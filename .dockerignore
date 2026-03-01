@@ -1,0 +1,15 @@
+.git/
+.idea/
+.specify/
+specs/
+*.md
+.gitignore
+.dockerignore
+.env*
+target/
+backend/src/test/
+frontend/tests/
+node_modules/
+*.log
+photos/
+tdlib-session/

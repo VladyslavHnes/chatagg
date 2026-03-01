@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatagg - Profile</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/theme.js"></script>
+</head>
+<body>
+    <header>
+        <h1><a href="dashboard.html">Chatagg</a></h1>
+        <nav>
+            <a href="dashboard.html">Home</a>
+            <a href="index.html">Books</a>
+            <a href="authors.html">Authors</a>
+            <a href="quotes.html">Quotes</a>
+            <a href="stats.html">Stats</a>
+            <a href="review.html" class="admin-only">Review</a>
+            <a href="users.html" class="admin-only">Users</a>
+            <a href="profile.html" id="nav-profile">Profile</a>
+            <button id="theme-toggle" title="Toggle theme"></button>
+        </nav>
+    </header>
+
+    <div class="card" id="profile-card">
+        <h2>Profile</h2>
+        <div id="profile-info" style="margin-top:16px;"></div>
+        <div style="margin-top:24px;">
+            <button id="logout-btn" style="background:#c62828;color:#fff;padding:8px 16px;border:none;border-radius:4px;cursor:pointer;">Logout</button>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/role.js"></script>
+    <script src="js/profile.js"></script>
+</body>
+</html>

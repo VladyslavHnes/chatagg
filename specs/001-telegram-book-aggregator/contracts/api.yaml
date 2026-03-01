@@ -1,0 +1,389 @@
+openapi: 3.0.3
+info:
+  title: Chatagg API
+  description: Telegram Book & Quote Aggregator REST API
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:7070
+    description: Local development
+
+security:
+  - basicAuth: []
+
+paths:
+  /api/books:
+    get:
+      summary: List books with optional filtering
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: size
+          in: query
+          schema: { type: integer, default: 20 }
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [date_desc, date_asc, title_asc, title_desc, duration_asc, duration_desc]
+            default: date_desc
+        - name: genre
+          in: query
+          schema: { type: string }
+          description: Filter by genre (exact match)
+        - name: country
+          in: query
+          schema: { type: string }
+          description: Filter by author country (exact match)
+      responses:
+        '200':
+          description: Paginated book list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/BookSummary' }
+                  total: { type: integer }
+                  page: { type: integer }
+                  size: { type: integer }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/books/{id}:
+    get:
+      summary: Get book detail with quotes and metadata
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Full book detail
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BookDetail' }
+        '404': { description: Book not found }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/quotes/search:
+    get:
+      summary: Full-text search across quotes
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: { type: string }
+          description: Search query text
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: size
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          description: Search results with book attribution
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/QuoteSearchResult' }
+                  total: { type: integer }
+                  page: { type: integer }
+                  size: { type: integer }
+                  query: { type: string }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/books/{id}/quotes:
+    get:
+      summary: List all quotes for a book
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: List of quotes for the book
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Quote' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/stats:
+    get:
+      summary: Reading statistics dashboard data
+      responses:
+        '200':
+          description: Aggregated reading statistics
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Stats' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/genres:
+    get:
+      summary: List all distinct genres
+      responses:
+        '200':
+          description: Genre list for filter dropdowns
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { type: string }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/countries:
+    get:
+      summary: List all distinct author countries
+      responses:
+        '200':
+          description: Country list for filter dropdowns
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { type: string }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/sync:
+    post:
+      summary: Trigger manual channel sync
+      responses:
+        '200':
+          description: Sync result
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SyncResult' }
+        '409':
+          description: Sync already in progress
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/review:
+    get:
+      summary: List flagged items for review
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: size
+          in: query
+          schema: { type: integer, default: 20 }
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [all, quote, message, duplicate]
+            default: all
+      responses:
+        '200':
+          description: Flagged items
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/ReviewItem' }
+                  total: { type: integer }
+                  page: { type: integer }
+                  size: { type: integer }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/review/{id}/approve:
+    put:
+      summary: Approve a flagged item
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                corrected_text: { type: string }
+                book_id: { type: integer }
+      responses:
+        '200': { description: Item approved }
+        '404': { description: Item not found }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/review/{id}/dismiss:
+    put:
+      summary: Dismiss a flagged item
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200': { description: Item dismissed }
+        '404': { description: Item not found }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/review/merge:
+    post:
+      summary: Merge duplicate books
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [keep_id, merge_ids]
+              properties:
+                keep_id:
+                  type: integer
+                  description: Book ID to keep as primary
+                merge_ids:
+                  type: array
+                  items: { type: integer }
+                  description: Book IDs to merge into the primary
+      responses:
+        '200': { description: Books merged }
+        '400': { description: Invalid merge request }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+components:
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+
+  responses:
+    Unauthorized:
+      description: Authentication required
+
+  schemas:
+    BookSummary:
+      type: object
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        authors:
+          type: array
+          items: { $ref: '#/components/schemas/Author' }
+        genre: { type: string, nullable: true }
+        announcement_date: { type: string, format: date-time }
+        reading_duration_days: { type: integer, nullable: true }
+        quote_count: { type: integer }
+
+    BookDetail:
+      type: object
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        authors:
+          type: array
+          items: { $ref: '#/components/schemas/Author' }
+        genre: { type: string, nullable: true }
+        review_note: { type: string, nullable: true }
+        announcement_date: { type: string, format: date-time }
+        first_quote_date: { type: string, format: date-time, nullable: true }
+        reading_duration_days: { type: integer, nullable: true }
+        cover_photo_path: { type: string, nullable: true }
+        metadata_source: { type: string, nullable: true }
+        telegram_message_id: { type: integer }
+        quotes:
+          type: array
+          items: { $ref: '#/components/schemas/Quote' }
+
+    Author:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        country: { type: string, nullable: true }
+
+    Quote:
+      type: object
+      properties:
+        id: { type: integer }
+        text_content: { type: string }
+        source_type: { type: string, enum: [text, photo] }
+        telegram_message_date: { type: string, format: date-time }
+        ocr_confidence: { type: number, nullable: true }
+        photo_path: { type: string, nullable: true }
+
+    QuoteSearchResult:
+      type: object
+      properties:
+        id: { type: integer }
+        text_content: { type: string }
+        source_type: { type: string }
+        book_id: { type: integer }
+        book_title: { type: string }
+        authors:
+          type: array
+          items: { type: string }
+        telegram_message_date: { type: string, format: date-time }
+        rank: { type: number }
+
+    Stats:
+      type: object
+      properties:
+        total_books: { type: integer }
+        total_quotes: { type: integer }
+        total_photos: { type: integer }
+        average_reading_days: { type: number, nullable: true }
+        books_per_month:
+          type: array
+          items:
+            type: object
+            properties:
+              month: { type: string, format: date }
+              count: { type: integer }
+        genre_distribution:
+          type: array
+          items:
+            type: object
+            properties:
+              genre: { type: string }
+              count: { type: integer }
+        country_distribution:
+          type: array
+          items:
+            type: object
+            properties:
+              country: { type: string }
+              count: { type: integer }
+
+    SyncResult:
+      type: object
+      properties:
+        new_messages: { type: integer }
+        books_found: { type: integer }
+        quotes_found: { type: integer }
+        photos_processed: { type: integer }
+        flagged_items: { type: integer }
+        duration_seconds: { type: number }
+
+    ReviewItem:
+      type: object
+      properties:
+        id: { type: integer }
+        type:
+          type: string
+          enum: [low_ocr, unrecognized, duplicate_book, orphan_quote]
+        telegram_message_id: { type: integer }
+        message_date: { type: string, format: date-time }
+        raw_text: { type: string, nullable: true }
+        ocr_text: { type: string, nullable: true }
+        ocr_confidence: { type: number, nullable: true }
+        photo_path: { type: string, nullable: true }
+        suggested_book_id: { type: integer, nullable: true }
+        suggested_book_title: { type: string, nullable: true }

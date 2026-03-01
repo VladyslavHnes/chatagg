@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatagg - Review Queue</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/theme.js"></script>
+</head>
+<body>
+    <header>
+        <h1><a href="dashboard.html">Chatagg</a></h1>
+        <nav>
+            <a href="dashboard.html">Home</a>
+            <a href="index.html">Books</a>
+            <a href="authors.html">Authors</a>
+            <a href="quotes.html">Quotes</a>
+            <a href="stats.html">Stats</a>
+            <a href="review.html" class="admin-only">Review</a>
+            <a href="users.html" class="admin-only">Users</a>
+            <a href="profile.html" id="nav-profile">Profile</a>
+            <button id="theme-toggle" title="Toggle theme"></button>
+        </nav>
+    </header>
+
+    <div class="controls">
+        <label for="type-filter">Filter:</label>
+        <select id="type-filter">
+            <option value="all">All</option>
+            <option value="quote">Quotes</option>
+            <option value="message">Photos</option>
+            <option value="duplicate">Duplicates</option>
+        </select>
+    </div>
+
+    <div id="review-list"></div>
+    <div id="empty-state" class="empty-state" style="display:none;">No flagged items.</div>
+
+    <div class="pagination">
+        <button id="prev-btn" disabled>Prev</button>
+        <span id="page-info"></span>
+        <button id="next-btn" disabled>Next</button>
+    </div>
+
+    <div id="approve-modal" class="modal-overlay">
+        <div class="modal">
+            <h3>Approve Item</h3>
+            <div class="form-group">
+                <label>Corrected text (optional)</label>
+                <textarea id="corrected-text"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Book ID (optional)</label>
+                <input type="number" id="approve-book-id">
+            </div>
+            <div class="actions">
+                <button onclick="closeModal()" style="background:var(--bg-surface-hover);color:var(--text-primary);border:1px solid var(--border-color);">Cancel</button>
+                <button onclick="submitApprove()" style="background:var(--status-success);color:#fff;">Approve</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/role.js"></script>
+    <script src="js/review.js"></script>
+</body>
+</html>

@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatagg - Books</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/theme.js"></script>
+</head>
+<body>
+    <header>
+        <h1><a href="dashboard.html">Chatagg</a></h1>
+        <nav>
+            <a href="dashboard.html">Home</a>
+            <a href="index.html">Books</a>
+            <a href="authors.html">Authors</a>
+            <a href="quotes.html">Quotes</a>
+            <a href="stats.html">Stats</a>
+            <a href="review.html" class="admin-only">Review</a>
+            <a href="users.html" class="admin-only">Users</a>
+            <a href="profile.html" id="nav-profile">Profile</a>
+            <button id="theme-toggle" title="Toggle theme"></button>
+        </nav>
+    </header>
+
+    <div class="controls">
+        <button id="sync-btn" class="admin-only">Sync Now</button>
+        <button id="add-book-btn" class="admin-only">Add Book</button>
+        <span id="sync-msg"></span>
+    </div>
+
+    <div id="sync-status" class="sync-status"></div>
+
+    <div class="controls">
+        <label for="sort-select">Sort:</label>
+        <select id="sort-select">
+            <option value="date_desc">Date (newest)</option>
+            <option value="date_asc">Date (oldest)</option>
+            <option value="title_asc">Title (A-Z)</option>
+            <option value="title_desc">Title (Z-A)</option>
+        </select>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Authors</th>
+                <th>Country</th>
+                <th>Genre
+                    <select id="filter-genre" style="display:block;width:100%;margin-top:4px;font-size:0.8rem;padding:2px;">
+                        <option value="">All</option>
+                        <option value="Fiction">Fiction</option>
+                        <option value="Non-fiction">Non-fiction</option>
+                    </select>
+                </th>
+                <th>Date</th>
+                <th>Quotes</th>
+            </tr>
+            <tr>
+                <th><input type="text" id="filter-title" placeholder="Filter..."></th>
+                <th><input type="text" id="filter-author" placeholder="Filter..."></th>
+                <th><input type="text" id="filter-country" placeholder="Filter..."></th>
+                <th></th>
+                <th></th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody id="book-table-body">
+        </tbody>
+    </table>
+
+    <div id="empty-state" class="empty-state" style="display:none;">No books found.</div>
+
+    <div class="pagination">
+        <button id="prev-btn" disabled>Prev</button>
+        <span id="page-info"></span>
+        <button id="next-btn" disabled>Next</button>
+    </div>
+
+    <div id="add-book-modal" class="modal-overlay">
+        <div class="modal">
+            <h3>Add Book</h3>
+            <div class="form-group">
+                <label>Title</label>
+                <input id="new-book-title" type="text">
+            </div>
+            <div class="form-group" style="position:relative;">
+                <label>Author</label>
+                <input id="new-book-author" type="text" autocomplete="off">
+                <div id="author-suggestions" style="display:none;position:absolute;left:0;right:0;top:100%;background:var(--bg-surface);border:1px solid var(--border-color);border-radius:0 0 var(--radius-sm) var(--radius-sm);max-height:200px;overflow-y:auto;z-index:10;box-shadow:var(--shadow);"></div>
+            </div>
+            <div class="form-group" id="new-book-country-group" style="display:none;position:relative;">
+                <label>Author Country</label>
+                <input id="new-book-country" type="text" autocomplete="off" placeholder="e.g. Ukraine">
+                <div id="country-suggestions" style="display:none;position:absolute;left:0;right:0;top:100%;background:var(--bg-surface);border:1px solid var(--border-color);border-radius:0 0 var(--radius-sm) var(--radius-sm);max-height:200px;overflow-y:auto;z-index:10;box-shadow:var(--shadow);"></div>
+            </div>
+            <div class="form-group">
+                <label>Genre</label>
+                <select id="new-book-genre">
+                    <option value="">—</option>
+                    <option value="Fiction">Fiction</option>
+                    <option value="Non-fiction">Non-fiction</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Date</label>
+                <input id="new-book-date" type="date">
+            </div>
+            <div class="actions">
+                <button id="add-book-cancel-btn" style="background:var(--bg-surface-hover);color:var(--text-primary);border:1px solid var(--border-color);">Cancel</button>
+                <button id="add-book-save-btn" style="background:var(--accent);color:#fff;">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="auth-modal" class="modal-overlay">
+        <div class="modal">
+            <h3 id="auth-modal-title">Enter Telegram Verification Code</h3>
+            <p id="auth-modal-desc" style="color:var(--text-secondary);font-size:0.875rem;margin-bottom:16px;">A verification code has been sent to your Telegram app. Enter it below to authenticate.</p>
+            <input type="text" id="auth-code-input" placeholder="12345" autocomplete="one-time-code" maxlength="10"
+                   style="font-size:1.25rem;text-align:center;letter-spacing:6px;">
+            <p id="auth-error" style="color:var(--status-error);display:none;margin-bottom:8px;font-size:0.875rem;"></p>
+            <div class="actions">
+                <button id="auth-cancel-btn" style="background:var(--bg-surface-hover);color:var(--text-primary);border:1px solid var(--border-color);">Cancel</button>
+                <button id="auth-submit-btn" style="background:var(--accent);color:#fff;">Submit</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/role.js"></script>
+    <script src="js/books.js"></script>
+</body>
+</html>

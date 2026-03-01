@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatagg</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/theme.js"></script>
+</head>
+<body>
+    <header>
+        <h1><a href="dashboard.html">Chatagg</a></h1>
+        <nav>
+            <a href="dashboard.html">Home</a>
+            <a href="index.html">Books</a>
+            <a href="authors.html">Authors</a>
+            <a href="quotes.html">Quotes</a>
+            <a href="stats.html">Stats</a>
+            <a href="review.html" class="admin-only">Review</a>
+            <a href="users.html" class="admin-only">Users</a>
+            <a href="profile.html" id="nav-profile">Profile</a>
+            <button id="theme-toggle" title="Toggle theme"></button>
+        </nav>
+    </header>
+
+    <div class="dashboard">
+        <div class="dashboard-top">
+            <div class="stat-cards" id="summary-cards"></div>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="dashboard-col">
+                <div id="random-quote-card" class="card random-quote" style="display:none;">
+                    <div class="random-quote-header">
+                        <span class="random-quote-label">Random Quote</span>
+                        <button id="random-quote-refresh" title="Another quote">&#8635;</button>
+                    </div>
+                    <div id="random-quote-content"></div>
+                    <div id="random-quote-source" class="random-quote-source"></div>
+                    <div id="random-quote-actions" class="quote-card-actions"></div>
+                </div>
+            </div>
+
+            <div class="dashboard-col">
+                <h2 style="margin-bottom:12px;">Recent Books</h2>
+                <div id="recent-books"></div>
+
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/role.js"></script>
+    <script src="js/dashboard.js"></script>
+</body>
+</html>

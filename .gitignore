@@ -1,0 +1,38 @@
+# Java
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.log
+
+# Maven
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Docker
+tdlib-session/
+
+# Application data
+photos/
+
+# Tesseract data
+tessdata/

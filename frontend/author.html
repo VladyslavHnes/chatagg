@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatagg - Author Detail</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/theme.js"></script>
+</head>
+<body>
+    <header>
+        <h1><a href="dashboard.html">Chatagg</a></h1>
+        <nav>
+            <a href="dashboard.html">Home</a>
+            <a href="index.html">Books</a>
+            <a href="authors.html">Authors</a>
+            <a href="quotes.html">Quotes</a>
+            <a href="stats.html">Stats</a>
+            <a href="review.html" class="admin-only">Review</a>
+            <a href="users.html" class="admin-only">Users</a>
+            <a href="profile.html" id="nav-profile">Profile</a>
+            <button id="theme-toggle" title="Toggle theme"></button>
+        </nav>
+    </header>
+
+    <div style="margin-bottom:20px;">
+        <a href="authors.html">&larr; Back to authors</a>
+    </div>
+
+    <div id="author-detail" class="card">
+        <div id="loading">Loading...</div>
+    </div>
+
+    <h2 id="books-heading" style="display:none;margin:28px 0 12px;">Books</h2>
+
+    <div class="controls" id="add-book-controls" style="display:none;">
+        <input type="text" id="new-book-title" placeholder="Book title..." style="flex:1;min-width:200px;">
+        <select id="new-book-genre" style="width:140px;">
+            <option value="">Genre</option>
+            <option value="Fiction">Fiction</option>
+            <option value="Non-fiction">Non-fiction</option>
+        </select>
+        <button id="add-book-btn">Add Book</button>
+    </div>
+
+    <table id="books-table" style="display:none;">
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Genre</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+        <tbody id="books-table-body">
+        </tbody>
+    </table>
+
+    <div id="no-books" class="empty-state" style="display:none;">No books for this author yet.</div>
+
+    <div id="edit-author-modal" class="modal-overlay">
+        <div class="modal">
+            <h3>Edit Author</h3>
+            <div class="form-group">
+                <label>Name</label>
+                <input id="edit-author-name" type="text">
+            </div>
+            <div class="form-group">
+                <label>Country</label>
+                <input id="edit-author-country" type="text">
+            </div>
+            <div class="actions">
+                <button id="edit-author-cancel-btn" style="background:var(--bg-surface-hover);color:var(--text-primary);border:1px solid var(--border-color);">Cancel</button>
+                <button id="edit-author-save-btn" style="background:var(--accent);color:#fff;">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/role.js"></script>
+    <script src="js/author-detail.js"></script>
+</body>
+</html>

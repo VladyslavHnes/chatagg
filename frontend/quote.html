@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatagg - Quote</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/theme.js"></script>
+</head>
+<body>
+    <header>
+        <h1><a href="dashboard.html">Chatagg</a></h1>
+        <nav>
+            <a href="dashboard.html">Home</a>
+            <a href="index.html">Books</a>
+            <a href="authors.html">Authors</a>
+            <a href="quotes.html">Quotes</a>
+            <a href="stats.html">Stats</a>
+            <a href="review.html" class="admin-only">Review</a>
+            <a href="users.html" class="admin-only">Users</a>
+            <a href="profile.html" id="nav-profile">Profile</a>
+            <button id="theme-toggle" title="Toggle theme"></button>
+        </nav>
+    </header>
+
+    <div style="margin-bottom:20px;">
+        <a href="quotes.html">&larr; Back to quotes</a>
+    </div>
+
+    <div id="quote-detail" class="card">
+        <div id="loading">Loading...</div>
+    </div>
+
+    <div id="quote-book" class="card" style="display:none;margin-top:16px;">
+        <div id="quote-book-info"></div>
+    </div>
+
+    <div id="quote-actions" style="display:none;margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;"></div>
+
+    <div id="edit-modal" class="modal-overlay">
+        <div class="modal">
+            <h3>Edit Quote</h3>
+            <div class="form-group">
+                <textarea id="edit-text" rows="6" style="width:100%;"></textarea>
+            </div>
+            <div class="actions">
+                <button id="edit-cancel-btn" style="background:var(--bg-surface-hover);color:var(--text-primary);border:1px solid var(--border-color);">Cancel</button>
+                <button id="edit-save-btn" style="background:var(--accent);color:#fff;">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="link-modal" class="modal-overlay">
+        <div class="modal">
+            <h3>Link to Book</h3>
+            <div class="form-group" style="position:relative;">
+                <input id="link-book-search" type="text" placeholder="Search books..." autocomplete="off">
+                <div id="link-book-results" style="max-height:250px;overflow-y:auto;margin-top:8px;"></div>
+            </div>
+            <div class="actions">
+                <button id="link-cancel-btn" style="background:var(--bg-surface-hover);color:var(--text-primary);border:1px solid var(--border-color);">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/role.js"></script>
+    <script src="js/quote-detail.js"></script>
+</body>
+</html>

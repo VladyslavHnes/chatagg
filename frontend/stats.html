@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatagg - Statistics</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/theme.js"></script>
+</head>
+<body>
+    <header>
+        <h1><a href="dashboard.html">Chatagg</a></h1>
+        <nav>
+            <a href="dashboard.html">Home</a>
+            <a href="index.html">Books</a>
+            <a href="authors.html">Authors</a>
+            <a href="quotes.html">Quotes</a>
+            <a href="stats.html">Stats</a>
+            <a href="review.html" class="admin-only">Review</a>
+            <a href="users.html" class="admin-only">Users</a>
+            <a href="profile.html" id="nav-profile">Profile</a>
+            <button id="theme-toggle" title="Toggle theme"></button>
+        </nav>
+    </header>
+
+    <div class="stat-cards" id="summary-cards"></div>
+
+    <h2 style="margin: 24px 0 12px;">Reading Timeline</h2>
+    <div class="card">
+        <div class="heatmap-wrapper" id="heatmap"></div>
+    </div>
+
+    <h2 style="margin: 24px 0 12px;">Books per Year</h2>
+    <div class="card">
+        <div class="bar-chart-wrapper">
+            <div class="bar-chart" id="yearly-chart"></div>
+        </div>
+    </div>
+
+    <h2 style="margin: 24px 0 12px;">Books per Month</h2>
+    <div class="card">
+        <div class="bar-chart-wrapper">
+            <div class="bar-chart" id="monthly-chart"></div>
+        </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 24px;">
+        <div>
+            <h2 style="margin-bottom: 12px;">Books per Country</h2>
+            <div class="card">
+                <div id="books-country-chart"></div>
+            </div>
+        </div>
+        <div>
+            <h2 style="margin-bottom: 12px;">Authors per Country</h2>
+            <div class="card">
+                <div id="authors-country-chart"></div>
+            </div>
+        </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 24px;">
+        <div style="display:flex;flex-direction:column;">
+            <h2 style="margin-bottom: 12px;">Fiction per Country</h2>
+            <div class="card" style="flex:1;">
+                <div id="fiction-country-chart"></div>
+            </div>
+        </div>
+        <div style="display:flex;flex-direction:column;">
+            <h2 style="margin-bottom: 12px;">Non-fiction per Country</h2>
+            <div class="card" style="flex:1;">
+                <div id="nonfiction-country-chart"></div>
+            </div>
+        </div>
+    </div>
+
+    <h2 style="margin: 24px 0 12px;">Most Popular Authors</h2>
+    <div class="card">
+        <div id="top-authors-chart"></div>
+    </div>
+
+    <h2 style="margin: 24px 0 12px;">Genre Distribution</h2>
+    <div class="card">
+        <div id="genre-list"></div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/role.js"></script>
+    <script src="js/stats.js"></script>
+</body>
+</html>
