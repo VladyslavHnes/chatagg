@@ -34,13 +34,16 @@ public class App {
         OcrService ocrService = new OcrService(config);
         SyncService syncService = new SyncService(config, db, telegramClient, messageParser, ocrService);
 
+        // Shared response cache (5-minute TTL, explicitly invalidated on mutations)
+        ResponseCache responseCache = new ResponseCache(5 * 60 * 1000L);
+
         // Controllers
-        SyncController syncController = new SyncController(syncService, telegramClient);
+        SyncController syncController = new SyncController(syncService, telegramClient, responseCache);
         AuthController authController = new AuthController(telegramClient);
-        BookController bookController = new BookController(db);
+        BookController bookController = new BookController(db, responseCache);
         QuoteController quoteController = new QuoteController(db);
         ReviewController reviewController = new ReviewController(db);
-        StatsController statsController = new StatsController(db);
+        StatsController statsController = new StatsController(db, responseCache);
         UserController userController = new UserController(userDao);
 
         // Resolve frontend dir: try ../frontend (when run from backend/) or frontend/ (from project root)

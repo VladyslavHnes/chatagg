@@ -4,6 +4,14 @@ var totalItems = 0;
 var cachedAuthors = null;
 var cachedCountries = null;
 
+function clearBooksCache() {
+    var keys = [];
+    for (var i = 0; i < sessionStorage.length; i++) {
+        if (sessionStorage.key(i).indexOf('books_cache:') === 0) keys.push(sessionStorage.key(i));
+    }
+    for (var i = 0; i < keys.length; i++) sessionStorage.removeItem(keys[i]);
+}
+
 document.addEventListener('DOMContentLoaded', function () {
     // Pre-fill filters from URL params
     var urlParams = new URLSearchParams(window.location.search);
@@ -144,8 +152,13 @@ function loadBooks() {
     if (country) params += '&country=' + encodeURIComponent(country);
     if (genre) params += '&genre=' + encodeURIComponent(genre);
 
+    var cacheKey = 'books_cache:' + params;
+    var cached = sessionStorage.getItem(cacheKey);
+    if (cached) renderBooks(JSON.parse(cached));
+
     API.get('/api/books' + params)
         .then(function (data) {
+            sessionStorage.setItem(cacheKey, JSON.stringify(data));
             renderBooks(data);
         })
         .catch(function (err) {
@@ -316,6 +329,8 @@ function saveNewBook() {
         date: date || null
     })
         .then(function (result) {
+            clearBooksCache();
+            sessionStorage.removeItem('authors_cache');
             document.getElementById('add-book-modal').classList.remove('active');
             window.location.href = 'book.html?id=' + result.id;
         })
@@ -341,6 +356,7 @@ function syncNow() {
                 showAuthModal(result.auth_type);
                 return;
             }
+            clearBooksCache();
             syncStatus.className = 'sync-status done';
             syncStatus.textContent = 'Sync complete: ' +
                 result.new_messages + ' new messages, ' +
@@ -451,6 +467,7 @@ function pollAuthStatus() {
                                 document.getElementById('sync-btn').disabled = false;
                                 return;
                             }
+                            clearBooksCache();
                             syncStatus.className = 'sync-status done';
                             syncStatus.textContent = 'Sync complete: ' +
                                 syncResult.new_messages + ' new messages, ' +

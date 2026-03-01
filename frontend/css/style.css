@@ -501,6 +501,13 @@ h2 {
     transition: background var(--t), border-color var(--t), box-shadow var(--t), transform var(--t);
 }
 
+a.stat-card {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+}
+
 .stat-card:hover {
     box-shadow: var(--shadow-hover);
     transform: translateY(-2px);

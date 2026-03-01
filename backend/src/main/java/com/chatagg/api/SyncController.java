@@ -15,15 +15,18 @@ public class SyncController {
 
     private final SyncService syncService;
     private final TelegramClient telegramClient;
+    private final ResponseCache cache;
 
-    public SyncController(SyncService syncService, TelegramClient telegramClient) {
+    public SyncController(SyncService syncService, TelegramClient telegramClient, ResponseCache cache) {
         this.syncService = syncService;
         this.telegramClient = telegramClient;
+        this.cache = cache;
     }
 
     public void triggerEnrich(Context ctx) {
         try {
             syncService.enrichBooks();
+            cache.invalidateAll();
             ctx.json(Map.of("status", "done"));
         } catch (Exception e) {
             log.error("Enrichment failed", e);
@@ -39,6 +42,7 @@ public class SyncController {
 
         try {
             SyncResult result = syncService.sync();
+            cache.invalidateAll();
             ctx.json(Map.of(
                     "new_messages", result.newMessages(),
                     "books_found", result.booksFound(),

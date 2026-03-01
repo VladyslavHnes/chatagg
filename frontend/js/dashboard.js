@@ -6,16 +6,25 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 function loadDashboard() {
+    var cachedStats = sessionStorage.getItem('stats_cache');
+    if (cachedStats) renderSummaryCards(JSON.parse(cachedStats));
+
     API.get('/api/stats')
         .then(function (data) {
+            sessionStorage.setItem('stats_cache', JSON.stringify(data));
             renderSummaryCards(data);
         })
         .catch(function (err) {
             console.error('Failed to load stats:', err);
         });
 
+    var recentBooksKey = 'books_cache:?page=1&size=5&sort=date_desc';
+    var cachedBooks = sessionStorage.getItem(recentBooksKey);
+    if (cachedBooks) renderRecentBooks(JSON.parse(cachedBooks).items || []);
+
     API.get('/api/books?page=1&size=5&sort=date_desc')
         .then(function (data) {
+            sessionStorage.setItem(recentBooksKey, JSON.stringify(data));
             renderRecentBooks(data.items || []);
         })
         .catch(function (err) {
@@ -26,16 +35,17 @@ function loadDashboard() {
 function renderSummaryCards(data) {
     var container = document.getElementById('summary-cards');
     var cards = [
-        { value: data.total_books, label: 'Books' },
-        { value: data.total_quotes, label: 'Quotes' },
-        { value: data.total_authors != null ? data.total_authors : '0', label: 'Authors' },
-        { value: data.avg_books_per_month != null ? data.avg_books_per_month : '0', label: 'Avg/Month' }
+        { value: data.total_books, label: 'Books', href: 'books.html' },
+        { value: data.total_quotes, label: 'Quotes', href: 'quotes.html' },
+        { value: data.total_authors != null ? data.total_authors : '0', label: 'Authors', href: 'authors.html' },
+        { value: data.avg_books_per_month != null ? data.avg_books_per_month : '0', label: 'Avg/Month', href: null }
     ];
 
     container.innerHTML = '';
     for (var i = 0; i < cards.length; i++) {
-        var card = document.createElement('div');
+        var card = cards[i].href ? document.createElement('a') : document.createElement('div');
         card.className = 'stat-card';
+        if (cards[i].href) card.href = cards[i].href;
         card.innerHTML = '<div class="value">' + cards[i].value + '</div><div class="label">' + cards[i].label + '</div>';
         container.appendChild(card);
     }

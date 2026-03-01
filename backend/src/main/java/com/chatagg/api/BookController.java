@@ -15,11 +15,13 @@ public class BookController {
     private final BookDao bookDao;
     private final AuthorDao authorDao;
     private final DatabaseManager db;
+    private final ResponseCache cache;
 
-    public BookController(DatabaseManager db) {
+    public BookController(DatabaseManager db, ResponseCache cache) {
         this.db = db;
         this.bookDao = new BookDao(db);
         this.authorDao = new AuthorDao(db);
+        this.cache = cache;
     }
 
     public void listBooks(Context ctx) {
@@ -36,7 +38,12 @@ public class BookController {
         if (title != null && title.isEmpty()) title = null;
         if (author != null && author.isEmpty()) author = null;
 
+        String cacheKey = "books:" + ctx.queryString();
+        Object cached = cache.get(cacheKey);
+        if (cached != null) { ctx.json(cached); return; }
+
         Map<String, Object> result = bookDao.findAll(page, size, sort, genre, country, title, author);
+        cache.put(cacheKey, result);
         ctx.json(result);
     }
 
@@ -62,6 +69,7 @@ public class BookController {
             authorDao.linkToBook(bookId, authorId);
         }
 
+        cache.invalidateAll();
         ctx.json(Map.of("id", bookId));
     }
 
@@ -138,6 +146,7 @@ public class BookController {
         }
 
         bookDao.delete(id);
+        cache.invalidateAll();
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("deleted", true);
@@ -180,14 +189,17 @@ public class BookController {
     }
 
     public void listAuthors(Context ctx) {
-        List<Author> authors = authorDao.findAll();
-        ctx.json(authors.stream().map(a -> {
+        Object cached = cache.get("authors");
+        if (cached != null) { ctx.json(cached); return; }
+        List<Map<String, Object>> result = authorDao.findAll().stream().map(a -> {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("id", a.getId());
             m.put("name", a.getName());
             m.put("country", a.getCountry());
             return m;
-        }).toList());
+        }).toList();
+        cache.put("authors", result);
+        ctx.json(result);
     }
 
     @SuppressWarnings("unchecked")
@@ -205,12 +217,14 @@ public class BookController {
             return;
         }
         authorDao.mergeAuthors(keepId, mergeIds);
+        cache.invalidateAll();
         ctx.json(Map.of("status", "merged"));
     }
 
     public void deleteAuthor(Context ctx) {
         long id = ctx.pathParamAsClass("id", Long.class).get();
         authorDao.delete(id);
+        cache.invalidateAll();
         ctx.json(Map.of("deleted", true));
     }
 
@@ -226,6 +240,7 @@ public class BookController {
         }
 
         authorDao.updateAuthor(id, name.trim(), country != null ? country.trim() : null);
+        cache.invalidateAll();
         ctx.json(Map.of("ok", true));
     }
 
@@ -238,6 +253,7 @@ public class BookController {
             return;
         }
         bookDao.updateTitle(id, title.trim());
+        cache.invalidateAll();
         ctx.json(Map.of("ok", true));
     }
 
@@ -254,10 +270,13 @@ public class BookController {
         Map<String, String> body = ctx.bodyAsClass(Map.class);
         String genre = body.get("genre");
         bookDao.updateGenre(id, genre != null && !genre.isBlank() ? genre.trim() : null, "manual");
+        cache.invalidateAll();
         ctx.json(Map.of("ok", true));
     }
 
     public void listGenres(Context ctx) {
+        Object cached = cache.get("genres");
+        if (cached != null) { ctx.json(cached); return; }
         List<String> genres = new ArrayList<>();
         try (Connection conn = db.getConnection();
              PreparedStatement ps = conn.prepareStatement(
@@ -269,11 +288,15 @@ public class BookController {
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
+        cache.put("genres", genres);
         ctx.json(genres);
     }
 
     public void listCountries(Context ctx) {
+        Object cached = cache.get("countries");
+        if (cached != null) { ctx.json(cached); return; }
         List<String> countries = authorDao.findAllCountries();
+        cache.put("countries", countries);
         ctx.json(countries);
     }
 }

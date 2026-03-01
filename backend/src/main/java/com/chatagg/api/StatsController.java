@@ -9,12 +9,17 @@ import java.util.*;
 public class StatsController {
 
     private final DatabaseManager db;
+    private final ResponseCache cache;
 
-    public StatsController(DatabaseManager db) {
+    public StatsController(DatabaseManager db, ResponseCache cache) {
         this.db = db;
+        this.cache = cache;
     }
 
     public void getStats(Context ctx) {
+        Object cached = cache.get("stats");
+        if (cached != null) { ctx.json(cached); return; }
+
         Map<String, Object> stats = new LinkedHashMap<>();
 
         try (Connection conn = db.getConnection()) {
@@ -260,6 +265,7 @@ public class StatsController {
             throw new RuntimeException("Failed to compute stats", e);
         }
 
+        cache.put("stats", stats);
         ctx.json(stats);
     }
 }

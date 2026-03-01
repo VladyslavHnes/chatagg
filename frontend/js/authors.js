@@ -31,9 +31,17 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 function loadAuthors() {
+    var cached = sessionStorage.getItem('authors_cache');
+    if (cached) {
+        allAuthors = JSON.parse(cached);
+        var filterVal = document.getElementById('filter-input').value;
+        renderAuthors(filterVal ? filterAuthors(filterVal) : allAuthors);
+    }
+
     API.get('/api/authors')
         .then(function (authors) {
             allAuthors = authors;
+            sessionStorage.setItem('authors_cache', JSON.stringify(authors));
             var filterVal = document.getElementById('filter-input').value;
             renderAuthors(filterVal ? filterAuthors(filterVal) : authors);
         })
@@ -156,6 +164,7 @@ function mergeSelected() {
 
     API.post('/api/authors/merge', { keep_id: keepId, merge_ids: mergeIds })
         .then(function () {
+            sessionStorage.removeItem('authors_cache');
             loadAuthors();
         })
         .catch(function (err) {
@@ -176,6 +185,7 @@ function deleteAuthor(authorId, name) {
     }
     API.delete('/api/authors/' + authorId)
         .then(function () {
+            sessionStorage.removeItem('authors_cache');
             loadAuthors();
         })
         .catch(function (err) {
@@ -192,6 +202,7 @@ function saveEditAuthor() {
     }
     API.put('/api/authors/' + editAuthorId, { name: name, country: country || null })
         .then(function () {
+            sessionStorage.removeItem('authors_cache');
             document.getElementById('edit-author-modal').classList.remove('active');
             loadAuthors();
         })
